@@ -623,9 +623,8 @@
                         ${nameTc}
                     </h3>
                     <p style="margin: 5px 0;"><strong>地區:</strong> ${regionTc} - ${districtTc}</p>
-                    <p style="margin: 5px 0;"><strong>地址:</strong><br/>${addressTc}</p>
+                    <p style="margin: 5px 0;"><strong>地址:</strong>${addressTc}</p>
                     <p style="margin: 5px 0;"><strong>電話:</strong> ${phone1}${phone2 ? ` / ${phone2}` : ''}</p>
-                    <p style="margin: 5px 0;"><strong>坐標:</strong> ${coordinates}</p>
                     <p style="margin: 5px 0; font-size: 0.8em; color: #666;"><strong>最後更新:</strong> ${lastUpdate}</p>
                 </div>
             `;
@@ -759,12 +758,12 @@
                                         <div class="info-value">${properties.NSEARCH02_TC || '未提供'}</div>
                                     </div>
                                     <div class="info-row">
-                                        <div class="info-label">最後更新</div>
-                                        <div class="info-value">${properties.LASTUPDATE || '未提供'}</div>
-                                    </div>
-                                    <div class="info-row">
                                         <div class="info-label">坐標</div>
                                         <div class="info-value">${lat ? lat.toFixed(6) + ', ' + lng.toFixed(6) : '未提供'}</div>
+                                    </div>
+                                    <div class="info-row text-success">
+                                        <div class="info-label">最後更新</div>
+                                        <div class="info-value">${properties.LASTUPDATE || '未提供'}</div>
                                     </div>
                                 </div>
                             </div>
