@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自修室查詢系統</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Awesome Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <style>
+        .element-hidden {
+            display: none !important;
+        }
+        /* Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            min-height: 100vh;
+            padding: 16px;
+            color: #1f2937;
+        }
+        /* Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .header h1 {
+            color: #111827;
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header .subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        .map-section {
+            flex: 0 0 60%;
+        }
+        .data-section {
+            flex: 0 0 40%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow-y: auto;
+            max-height: 73vh;
+        }
+        /* Map Section */
+        .map-container {
+            height: 73vh !important;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 16px;
+        }
+        /* Data Section Styles */
+        .data-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .data-header h2 {
+            color: #111827;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .data-header .subtitle {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .data-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #4f46e5;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .accordion-container {
+            margin-top: 20px;
+        }
+        .facility-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .facility-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .facility-header {
+            background: #3da956;
+            color: white;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .facility-header.active {
+            background: #f5c842;
+            color: black;
+        }
+        .facility-header i {
+            transition: transform 0.3s ease;
+        }
+        .facility-header.collapsed i {
+            transform: rotate(-90deg);
+        }
+        .facility-content {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .info-value {
+            flex: 1;
+            color: #6b7280;
+            word-break: break-word;
+        }
+        .info-value a {
+            color: #4f46e5;
+            text-decoration: none;
+        }
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        /* Facility specific styles */
+        .facility-icon {
+            color: #4f46e5;
+            margin-right: 8px;
+        }
+        .type-badge {
+            background: #f5c842;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .type-badge.active {
+            background: #3da956 !important;
+            color: white !important;
+        }
+        /* Marker styles */
+        .facility-marker {
+            background: #4f46e5;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .facility-marker.selected {
+            background: #ef4444;
+            width: 20px;
+            height: 20px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+        /* District group styles */
+        .location-group {
+            margin-bottom: 16px;
+        }
+        .location-header {
+            background: #4f46e5 !important;
+            color: white !important;
+            border-radius: 8px 8px 0 0;
+        }
+        .location-content {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+        }
+        .location-header:hover {
+            background: #4338ca !important;
+        }
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+            padding: 20px;
+            margin-top: auto;
+        }
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+                background: #4f46e5;
+            }
+            .container {
+                gap: 16px;
+            }
+            .header {
+                padding: 16px;
+                border-radius: 12px;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .main-content {
+                flex-direction: column;
+            }
+            .map-section,
+            .data-section {
+                flex: 1 1 100%;
+                width: 100%;
+            }
+            .map-container {
+                height: 400px;
+                border-radius: 12px;
+            }
+            .data-section {
+                max-height: 400px;
+                padding: 15px;
+            }
+            .data-header h2 {
+                font-size: 1.3rem;
+            }
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            .info-row {
+                flex-direction: column;
+                margin-bottom: 15px;
+            }
+            .info-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            .facility-header {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+        }
+        /* Desktop Enhancements */
+        @media (min-width: 1200px) {
+            .map-container {
+                height: 600px;
+            }
+        }
+        /* Leaflet Customizations */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        /* Smooth Transitions */
+        * {
+            transition: all 0.3s ease;
+        }
+        /* Study room specific styles */
+        .study-room-icon {
+            background: #3b82f6 !important;
+        }
+        .study-room-header {
+            background: #3b82f6 !important;
+        }
+        .study-room-header:hover {
+            background: #2563eb !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>自修室查詢系統</h1>
+            <p class="subtitle">香港康樂及文化事務署自修室位置及詳細資訊</p>
+        </header>
+        <main class="main-content">
+            <section class="map-section">
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </section>
+            <section class="data-section">
+                <div class="data-header">
+                    <h2>自修室列表</h2>
+                    <p class="subtitle">點擊自修室名稱查看更多詳細資訊</p>
+                </div>
+                <div class="data-stats">
+                    <div class="stat-item">
+                        <span id="total-facilities" class="stat-value">0</span>
+                        <span class="stat-label">自修室總數</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="total-regions" class="stat-value">0</span>
+                        <span class="stat-label">區域數目</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="total-districts" class="stat-value">0</span>
+                        <span class="stat-label">地區數目</span>
+                    </div>
+                </div>
+                <div class="accordion-container" id="accordion-container">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>正在加載自修室資料...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>自修室查詢系統 | 資料來源: 香港政府地理數據平台 | 支援桌面及流動裝置</p>
+        </footer>
+    </div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // 定義數據源
+        const DATA_SOURCE_URL = 'https://portal.csdi.gov.hk/server/services/common/edb_rcd_1633320468580_185/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=EDBSTRM&outputFormat=geojson';
+        
+        // 全局變量
+        let map;
+        let allStudyRooms = [];
+        let markersLayer = L.layerGroup();
+        let selectedMarker = null;
+        let totalFacilities = 0;
+        let totalRegions = 0;
+        let totalDistricts = 0;
+
+        // 初始化地圖配置 - 以香港為中心
+        const MAP_CONFIG = {
+            center: [22.3193, 114.1694],
+            zoom: 12
+        };
+
+        // 初始化應用
+        document.addEventListener('DOMContentLoaded', function () {
+            initMap();
+            loadStudyRoomData();
+        });
+
+        function initMap() {
+            // 初始化地圖
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+
+            // 添加地圖圖層
+            const tileLayers = {
+                "開放街道地圖": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap',
+                    maxZoom: 19,
+                    subdomains: ['a', 'b', 'c']
+                }),
+                "衛星圖像": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '© Esri',
+                    maxZoom: 19
+                }),
+                "地形圖": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenTopoMap',
+                    maxZoom: 17
+                })
+            };
+
+            tileLayers["開放街道地圖"].addTo(map);
+            
+            // 添加圖層控制
+            L.control.layers(tileLayers, null, {
+                collapsed: true,
+                position: 'topright'
+            }).addTo(map);
+
+            // 添加標記圖層
+            markersLayer.addTo(map);
+        }
+
+        // 實際API調用函數
+        async function loadStudyRoomData() {
+            try {
+                const response = await fetch(DATA_SOURCE_URL);
+                const data = await response.json();
+                processStudyRoomData(data);
+            } catch (error) {
+                console.error('加載數據時出錯:', error);
+                document.getElementById('accordion-container').innerHTML =
+                    '<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>加載數據時出錯</p></div>';
+                showNotification('加載數據時出錯，請稍後再試', 'error');
+            }
+        }
+
+        function processStudyRoomData(data) {
+            if (data.features && data.features.length > 0) {
+                allStudyRooms = data.features;
+                createMarkers(allStudyRooms);
+                updateStatistics();
+                updateStudyRoomsList(allStudyRooms);
+                
+                // 自動調整地圖視圖以顯示所有自修室
+                const bounds = calculateAllMarkersBounds();
+                if (bounds) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+                showNotification(`成功加載 ${allStudyRooms.length} 個自修室資料`, 'success');
+            } else {
+                document.getElementById('accordion-container').innerHTML =
+                    '<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>未找到自修室資料</p></div>';
+            }
+        }
+
+        function calculateAllMarkersBounds() {
+            let bounds = null;
+            markersLayer.eachLayer(function (layer) {
+                if (layer.getLatLng) {
+                    const latLng = layer.getLatLng();
+                    if (bounds) {
+                        bounds.extend(latLng);
+                    } else {
+                        bounds = L.latLngBounds([latLng, latLng]);
+                    }
+                }
+            });
+            return bounds;
+        }
+
+        function createMarkers(features) {
+            markersLayer.clearLayers();
+            totalFacilities = 0;
+            const regions = new Set();
+            const districts = new Set();
+
+            features.forEach(feature => {
+                const properties = feature.properties;
+                const geometry = feature.geometry;
+                
+                if (geometry && geometry.type === 'Point') {
+                    const [lng, lat] = geometry.coordinates;
+                    
+                    // 創建自修室標記
+                    const markerIcon = L.divIcon({
+                        className: 'facility-marker study-room-icon',
+                        html: '<i class="fas fa-graduation-cap"></i>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30],
+                        popupAnchor: [0, -30]
+                    });
+
+                    const marker = L.marker([lat, lng], {
+                        icon: markerIcon,
+                        id: properties.OBJECTID
+                    });
+
+                    marker.properties = properties;
+                    marker.bindPopup(createStudyRoomPopupContent(properties, lat, lng));
+
+                    // 點擊事件
+                    marker.on('click', function () {
+                        if (selectedMarker) {
+                            selectedMarker.setIcon(L.divIcon({
+                                className: 'facility-marker study-room-icon',
+                                html: '<i class="fas fa-graduation-cap"></i>',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 30],
+                                popupAnchor: [0, -30]
+                            }));
+                        }
+                        
+                        // 設置當前選中的標記樣式
+                        marker.setIcon(L.divIcon({
+                            className: 'facility-marker selected',
+                            html: '<i class="fas fa-graduation-cap"></i>',
+                            iconSize: [35, 35],
+                            iconAnchor: [17.5, 35],
+                            popupAnchor: [0, -35]
+                        }));
+                        
+                        selectedMarker = marker;
+                        marker.openPopup();
+                        map.setView([lat, lng], 15, { animate: true });
+                        highlightStudyRoom(marker.id);
+                    });
+
+                    markersLayer.addLayer(marker);
+
+                    // 統計數據
+                    totalFacilities++;
+                    if (properties.SEARCH01_TC) regions.add(properties.SEARCH01_TC);
+                    if (properties.SEARCH02_TC) districts.add(properties.SEARCH02_TC);
+                }
+            });
+
+            totalRegions = regions.size;
+            totalDistricts = districts.size;
+        }
+
+        function createStudyRoomPopupContent(properties, lat, lng) {
+            const nameTc = properties.NAME_TC || '未命名自修室';
+            const addressTc = properties.ADDRESS_TC || '地址未提供';
+            const regionTc = properties.SEARCH01_TC || '區域未提供';
+            const districtTc = properties.SEARCH02_TC || '地區未提供';
+            const phone1 = properties.NSEARCH01_TC || '電話未提供';
+            const phone2 = properties.NSEARCH02_TC || '';
+            const lastUpdate = properties.LASTUPDATE || '更新時間未提供';
+            const coordinates = lat && lng ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '坐標未提供';
+
+            return `
+                <div style="max-width: 300px; padding: 10px;">
+                    <h3 style="margin: 0 0 10px 0; color: #4f46e5;">
+                        ${nameTc}
+                    </h3>
+                    <p style="margin: 5px 0;"><strong>地區:</strong> ${regionTc} - ${districtTc}</p>
+                    <p style="margin: 5px 0;"><strong>地址:</strong><br/>${addressTc}</p>
+                    <p style="margin: 5px 0;"><strong>電話:</strong> ${phone1}${phone2 ? ` / ${phone2}` : ''}</p>
+                    <p style="margin: 5px 0;"><strong>坐標:</strong> ${coordinates}</p>
+                    <p style="margin: 5px 0; font-size: 0.8em; color: #666;"><strong>最後更新:</strong> ${lastUpdate}</p>
+                </div>
+            `;
+        }
+
+        function updateStatistics() {
+            document.getElementById('total-facilities').textContent = totalFacilities;
+            document.getElementById('total-regions').textContent = totalRegions;
+            document.getElementById('total-districts').textContent = totalDistricts;
+        }
+
+        function updateStudyRoomsList(features) {
+            const container = document.getElementById('accordion-container');
+            
+            if (features.length === 0) {
+                container.innerHTML = '<div class="no-data"><i class="fas fa-graduation-cap"></i><p>未找到自修室資料</p></div>';
+                return;
+            }
+
+            // 按區域分組，然後按地區分組
+            const groupedData = {};
+            
+            features.forEach(feature => {
+                const properties = feature.properties;
+                const region = properties.SEARCH01_TC || '未分類';
+                const district = properties.SEARCH02_TC || '未分類';
+                
+                if (!groupedData[region]) {
+                    groupedData[region] = {};
+                }
+                if (!groupedData[region][district]) {
+                    groupedData[region][district] = [];
+                }
+                
+                groupedData[region][district].push({
+                    feature: feature,
+                    properties: properties,
+                    id: properties.OBJECTID
+                });
+            });
+
+            // 生成手風琴HTML
+            let accordionHTML = '';
+            let regionIndex = 1;
+            
+            // 對區域進行排序
+            const sortedRegions = Object.keys(groupedData).sort();
+            
+            sortedRegions.forEach(region => {
+                const districtsInRegion = groupedData[region];
+                let regionFacilityCount = 0;
+                
+                // 計算區域內自修室總數
+                Object.values(districtsInRegion).forEach(facilities => {
+                    regionFacilityCount += facilities.length;
+                });
+                
+                // 對地區進行排序
+                const sortedDistricts = Object.keys(districtsInRegion).sort();
+                
+                accordionHTML += `
+                    <div class="location-group" data-region="${region}">
+                        <div class="facility-item">
+                            <div class="facility-header location-header" onclick="toggleRegionGroup('${region}')">
+                                <div>
+                                    <i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>
+                                    <span>${regionIndex}. ${region} (${regionFacilityCount}個自修室)</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="region-${region}" class="location-content" style="display:none">
+                `;
+                
+                sortedDistricts.forEach((district, districtIndex) => {
+                    const facilities = districtsInRegion[district];
+                    
+                    accordionHTML += `
+                        <div class="facility-item" style="margin-left: 10px; margin-bottom: 10px; border-left: 3px solid #4f46e5;">
+                            <div class="facility-header study-room-header" onclick="toggleDistrictGroup('${region}-${district}')">
+                                <div>
+                                    <i class="fas fa-map-marker" style="margin-right: 8px;"></i>
+                                    <span>${districtIndex + 1}. ${district} (${facilities.length}個)</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="district-${region}-${district}" class="facility-content" style="display: none; padding: 10px;">
+                    `;
+                    
+                    facilities.forEach((item, facilityIndex) => {
+                        const properties = item.properties;
+                        const geometry = item.feature.geometry;
+                        
+                        let lat = null;
+                        let lng = null;
+                        if (geometry && geometry.type === 'Point') {
+                            [lng, lat] = geometry.coordinates;
+                        }
+                        
+                        accordionHTML += `
+                            <div class="facility-item" id="studyroom-${item.id}" style="margin-left: 20px; margin-top: 8px;">
+                                <div class="facility-header" onclick="toggleStudyRoom(${item.id})">
+                                    <div>
+                                        <i class="fas fa-graduation-cap facility-icon"></i>
+                                        <span>${facilityIndex + 1}. ${properties.NAME_TC || '未命名自修室'}</span>
+                                    </div>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div id="content-${item.id}" class="facility-content" style="display: none;">
+                                    <div class="info-row">
+                                        <div class="info-label">區域</div>
+                                        <div class="info-value">${properties.SEARCH01_TC || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">地區</div>
+                                        <div class="info-value">${properties.SEARCH02_TC || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">自修室名稱</div>
+                                        <div class="info-value">${properties.NAME_TC || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">地址</div>
+                                        <div class="info-value">${properties.ADDRESS_TC || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">電話 1</div>
+                                        <div class="info-value">${properties.NSEARCH01_TC || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">電話 2</div>
+                                        <div class="info-value">${properties.NSEARCH02_TC || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">最後更新</div>
+                                        <div class="info-value">${properties.LASTUPDATE || '未提供'}</div>
+                                    </div>
+                                    <div class="info-row">
+                                        <div class="info-label">坐標</div>
+                                        <div class="info-value">${lat ? lat.toFixed(6) + ', ' + lng.toFixed(6) : '未提供'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    accordionHTML += `
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                accordionHTML += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                regionIndex++;
+            });
+
+            container.innerHTML = accordionHTML;
+        }
+
+        function toggleRegionGroup(regionId) {
+            const regionContent = document.getElementById('region-' + regionId);
+            const header = regionContent.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            
+            if (regionContent.style.display === 'none') {
+                regionContent.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                regionContent.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function toggleDistrictGroup(districtId) {
+            const districtContent = document.getElementById('district-' + districtId);
+            const header = districtContent.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            
+            if (districtContent.style.display === 'none') {
+                districtContent.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                districtContent.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function highlightStudyRoom(studyRoomId) {
+            const studyRoomElement = document.getElementById('studyroom-' + studyRoomId);
+            
+            if (studyRoomElement) {
+                expandAllParentContainers(studyRoomElement);
+                studyRoomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                const content = document.getElementById('content-' + studyRoomId);
+                const header = content.previousElementSibling;
+                const icon = header.querySelector('.fa-chevron-down');
+                
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    if (icon) icon.className = 'fas fa-chevron-up';
+                }
+                
+                studyRoomElement.style.boxShadow = '0 0 0 2px #4f46e5';
+                studyRoomElement.style.transition = 'box-shadow 0.3s ease';
+                
+                setTimeout(() => {
+                    studyRoomElement.style.boxShadow = '';
+                }, 2000);
+            }
+            
+            markersLayer.eachLayer(layer => {
+                if (layer.id === studyRoomId) {
+                    if (selectedMarker && selectedMarker !== layer) {
+                        selectedMarker.setIcon(L.divIcon({
+                            className: 'facility-marker study-room-icon',
+                            html: '<i class="fas fa-graduation-cap"></i>',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 30],
+                            popupAnchor: [0, -30]
+                        }));
+                    }
+                    
+                    layer.setIcon(L.divIcon({
+                        className: 'facility-marker selected',
+                        html: '<i class="fas fa-graduation-cap"></i>',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 35],
+                        popupAnchor: [0, -35]
+                    }));
+                    
+                    selectedMarker = layer;
+                }
+            });
+        }
+
+        function expandAllParentContainers(element) {
+            let currentElement = element.parentElement;
+            
+            while (currentElement) {
+                if (currentElement.classList.contains('location-content')) {
+                    const regionId = currentElement.id.replace('region-', '');
+                    const regionHeader = currentElement.previousElementSibling;
+                    const regionIcon = regionHeader.querySelector('.fa-chevron-down, .fa-chevron-up');
+                    
+                    if (currentElement.style.display === 'none') {
+                        currentElement.style.display = 'block';
+                        if (regionIcon) regionIcon.className = 'fas fa-chevron-up';
+                    }
+                }
+                
+                if (currentElement.classList.contains('facility-content') && currentElement.id.startsWith('district-')) {
+                    const districtHeader = currentElement.previousElementSibling;
+                    const districtIcon = districtHeader.querySelector('.fa-chevron-down, .fa-chevron-up');
+                    
+                    if (currentElement.style.display === 'none') {
+                        currentElement.style.display = 'block';
+                        if (districtIcon) districtIcon.className = 'fas fa-chevron-up';
+                    }
+                }
+                
+                currentElement = currentElement.parentElement;
+                
+                if (currentElement && currentElement.id === 'accordion-container') {
+                    break;
+                }
+            }
+        }
+
+        function toggleStudyRoom(id) {
+            const content = document.getElementById('content-' + id);
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                content.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+
+            Object.assign(notification.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: type === 'success' ? '#10b981' : '#3b82f6',
+                color: 'white',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: '3000',
+                animation: 'slideIn 0.3s ease-out'
+            });
+
+            document.body.appendChild(notification);
+
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // 首次加載顯示教程
+        if (!localStorage.getItem('studyRoomTutorialShown')) {
+            setTimeout(() => {
+                alert("歡迎使用自修室查詢系統！\n\n• 點擊地圖上的自修室標記可查看詳細資訊\n• 點擊列表中的自修室名稱可展開/收起詳細資訊\n• 自修室按區域>地區分組顯示\n• 可使用左上角圖層控制切換地圖樣式");
+                localStorage.setItem('studyRoomTutorialShown', 'true');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
